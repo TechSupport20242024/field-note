@@ -140,14 +140,14 @@ function fmt(n){return'\u00a5'+n.toLocaleString()}
 // ============================================================
 // API
 // ============================================================
-// GAS通信（XMLHttpRequest: GASの302リダイレクトを確実に処理）
-function gasXHR(url){return new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open('GET',url,true);x.onload=function(){try{resolve(JSON.parse(x.responseText))}catch(e){reject(new Error('JSON parse error: '+x.responseText.substring(0,100)))}};x.onerror=function(){reject(new Error('XHR network error'))};x.send()})}
-async function apiGet(action,params={}){if(!API_URL)return null;try{let url=API_URL+'?action='+encodeURIComponent(action);Object.entries(params).forEach(([k,v])=>{url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(v)});return await gasXHR(url)}catch(e){console.error('GET error:',e);return null}}
+// GAS通信（JSONP: GASの302リダイレクトでもCORSに影響されない）
+function gasJSONP(url){return new Promise((resolve,reject)=>{const cb='_gcb'+Date.now()+'_'+Math.random().toString(36).slice(2);window[cb]=d=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);resolve(d)};const s=document.createElement('script');s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;s.onerror=()=>{delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);reject(new Error('通信に失敗しました'))};document.head.appendChild(s)})}
+async function apiGet(action,params={}){if(!API_URL)return null;try{let url=API_URL+'?action='+encodeURIComponent(action);Object.entries(params).forEach(([k,v])=>{url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(v)});return await gasJSONP(url)}catch(e){console.error('GET error:',e);return null}}
 async function apiPost(action,data){
   if(!API_URL)return null;
   try{
     let url=API_URL+'?action='+encodeURIComponent(action)+'&payload='+encodeURIComponent(JSON.stringify(data));
-    const j=await gasXHR(url);
+    const j=await gasJSONP(url);
     if(j&&j.error){console.error('GAS error:',j.error);alert('GASエラー: '+j.error)}
     return j;
   }catch(e){console.error('API error:',e);alert('通信エラー: '+e.message);return null}

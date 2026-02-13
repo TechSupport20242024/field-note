@@ -63,9 +63,10 @@ const I={
 };
 
 // ============================================================
-// ★ GAS Web App URL — デプロイ後にここにURLを貼る ★
+// ★ GAS Web App URL — 設定画面から入力・保存されます ★
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbw-yfLEymv_kvs8IFgb3KfviW5n7B-CjbdhUDWHSHDiRSEiwUg18i-Y7yVIYRBcTyGo/exec';
+let API_URL = '';
+try { API_URL = localStorage.getItem('fn_api_url') || ''; } catch(e) {}
 
 // ============================================================
 // CONFIG
@@ -151,7 +152,7 @@ function ApiBanner(){
     h('span',{style:{color:'#f59e0b',flexShrink:0,marginTop:2}},I.AlertCircle(16)),
     h('div',null,
       h('div',{style:{fontSize:12,fontWeight:600,color:'#f59e0b'}},'オフラインモード'),
-      h('div',{style:{fontSize:11,color:'#94a3b8',marginTop:2,lineHeight:1.5}},'GAS未接続です。index.html の API_URL にGASデプロイURLを設定するとスプレッドシートに記録されます。')
+      h('div',{style:{fontSize:11,color:'#94a3b8',marginTop:2,lineHeight:1.5}},'GAS未接続です。下の「設定」タブからGASウェブアプリのURLを入力してください。')
     )
   );
 }
@@ -453,6 +454,8 @@ function GoalScreen({goal,onSaveGoal}){
   const[targetProfit,setTargetProfit]=useState(goal.targetProfit?String(goal.targetProfit):'');
   const[saving,setSaving]=useState(false);
   const[done,setDone]=useState(false);
+  const[apiUrl,setApiUrl]=useState(API_URL);
+  const[apiSaved,setApiSaved]=useState(false);
   const tp=Number(targetProfit)||0;
   const estRevenue=tp>0?Math.round(tp/0.8):0;
   const estCases=estRevenue>0?Math.ceil(estRevenue/15000):0;
@@ -466,9 +469,39 @@ function GoalScreen({goal,onSaveGoal}){
     else{setTimeout(()=>{onSaveGoal(g);setSaving(false);setDone(true);setTimeout(()=>setDone(false),2000)},400)}
   }
 
+  function handleApiSave(){
+    const v=apiUrl.trim();
+    try{localStorage.setItem('fn_api_url',v)}catch(e){}
+    API_URL=v;
+    setApiSaved(true);
+    setTimeout(()=>location.reload(),800);
+  }
+
+  const cs={borderRadius:16,padding:16,background:'#1e293b'};
+
   return h('div',{style:{padding:16,display:'flex',flexDirection:'column',gap:20,paddingBottom:32}},
-    h('div',{style:{fontSize:16,fontWeight:700,color:'#e2e8f0',display:'flex',alignItems:'center',gap:8}},I.Settings(18),' 月次目標設定'),
-    h('div',{style:{borderRadius:16,padding:16,background:'#1e293b'}},h('div',{style:{fontSize:12,color:'#64748b',marginBottom:4}},'対象月'),h('div',{style:{fontSize:20,fontWeight:700,color:'#e2e8f0'}},now.getFullYear()+'年'+(now.getMonth()+1)+'月')),
+    h('div',{style:{fontSize:16,fontWeight:700,color:'#e2e8f0',display:'flex',alignItems:'center',gap:8}},I.Settings(18),' 設定'),
+
+    // === GAS接続 ===
+    h('div',{style:{...cs,border:API_URL?'1px solid rgba(16,185,129,0.2)':'1px solid rgba(245,158,11,0.3)'}},
+      h('div',{style:{fontSize:13,fontWeight:700,color:API_URL?'#10b981':'#f59e0b',marginBottom:12,display:'flex',alignItems:'center',gap:6}},
+        API_URL?I.CheckCircle(14):I.AlertCircle(14),
+        API_URL?' GAS接続済み':' GAS未接続'
+      ),
+      h('div',{style:{fontSize:11,color:'#64748b',marginBottom:8}},'GASウェブアプリのURLを貼り付けてください'),
+      h('input',{type:'text',value:apiUrl,onChange:e=>setApiUrl(e.target.value),
+        placeholder:'https://script.google.com/macros/s/.../exec',
+        style:{width:'100%',boxSizing:'border-box',padding:'12px',borderRadius:10,border:'1px solid #334155',background:'#0f172a',color:'#e2e8f0',fontSize:13,outline:'none'}}),
+      h('button',{onClick:handleApiSave,disabled:apiSaved,
+        style:{marginTop:10,width:'100%',padding:'12px',borderRadius:10,border:'none',fontWeight:700,fontSize:13,cursor:'pointer',
+          background:apiSaved?'#10b981':'#2563eb',color:'#fff',transition:'all .15s'}},
+        apiSaved?'✅ 保存しました（再読み込み中…）':'URLを保存して接続'
+      )
+    ),
+
+    // === 月次目標 ===
+    h('div',{style:{fontSize:14,fontWeight:700,color:'#e2e8f0',marginTop:8}},'月次目標設定'),
+    h('div',{style:cs},h('div',{style:{fontSize:12,color:'#64748b',marginBottom:4}},'対象月'),h('div',{style:{fontSize:20,fontWeight:700,color:'#e2e8f0'}},now.getFullYear()+'年'+(now.getMonth()+1)+'月')),
     h('div',{style:{borderRadius:16,padding:16,background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.1)'}},
       h('div',{style:{fontSize:12,color:'#60a5fa',marginBottom:8,display:'flex',alignItems:'center',gap:6}},I.Info(12),' 年間目標からの参考値'),
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
@@ -488,12 +521,7 @@ function GoalScreen({goal,onSaveGoal}){
       saving?h('div',{style:{width:20,height:20,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 1s linear infinite'}}):
       done?h(Fragment,null,I.CheckCircle(18),' 保存しました'):h(Fragment,null,I.Send(18),' 目標を設定')
     ),
-    !API_URL&&h('div',{style:{fontSize:11,color:'#f59e0b',textAlign:'center'}},'※ GAS未接続のためスプレッドシートには未保存'),
-    // Googleフォームについて
-    h('div',{style:{borderRadius:16,padding:16,background:'rgba(15,23,42,0.6)',marginTop:8}},
-      h('div',{style:{fontSize:12,color:'#64748b',marginBottom:8,display:'flex',alignItems:'center',gap:6}},I.Info(12),' Googleフォームについて'),
-      h('div',{style:{fontSize:11,color:'#475569',lineHeight:1.8}},'以前の設計で使用していたGoogleフォーム（案件入力・月次目標）は、この現場ノートPWAが完全に置き換えます。既存フォームは削除不要ですが、今後はこのアプリから入力してください。')
-    )
+    !API_URL&&h('div',{style:{fontSize:11,color:'#f59e0b',textAlign:'center'}},'※ GAS未接続のためスプレッドシートには未保存')
   );
 }
 
@@ -549,10 +577,10 @@ function App(){
     ),
     ApiBanner(),
     h('main',{style:{paddingBottom:'calc(4.5rem + env(safe-area-inset-bottom))'}},
-      tab==='entry'&&CaseEntry({onSave:handleSave,customers}),
-      tab==='dashboard'&&DashboardScreen({summary,goal,recentCases:cases.slice(0,5)}),
-      tab==='history'&&HistoryScreen({cases}),
-      tab==='goal'&&GoalScreen({goal,onSaveGoal:setGoal})
+      tab==='entry'&&h(CaseEntry,{onSave:handleSave,customers}),
+      tab==='dashboard'&&h(DashboardScreen,{summary,goal,recentCases:cases.slice(0,5)}),
+      tab==='history'&&h(HistoryScreen,{cases}),
+      tab==='goal'&&h(GoalScreen,{goal,onSaveGoal:setGoal})
     ),
     h('nav',{style:{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid rgba(30,41,59,.5)',display:'flex',background:'rgba(15,23,42,0.97)',backdropFilter:'blur(20px)',paddingBottom:'env(safe-area-inset-bottom)'}},
       tabs.map(t=>h('button',{key:t.key,onClick:()=>setTab(t.key),style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,minHeight:52,paddingTop:8,paddingBottom:4,border:'none',cursor:'pointer',background:'transparent',color:tab===t.key?'#60a5fa':'#475569',transition:'color .15s'}},t.icon(22),h('span',{style:{fontSize:10,fontWeight:600}},t.label)))

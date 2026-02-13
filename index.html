@@ -63,10 +63,9 @@ const I={
 };
 
 // ============================================================
-// ★ GAS Web App URL — 設定画面から入力・保存されます ★
+// ★ GAS Web App URL ★
 // ============================================================
-let API_URL = '';
-try { API_URL = localStorage.getItem('fn_api_url') || ''; } catch(e) {}
+const API_URL = 'https://script.google.com/macros/s/AKfycbzLGQcY5jzB3JIigK8JlQCchAio1gsDebAuTS0cj_AlGtNjHnABYAgFFuDvLxx7nlGB/exec';
 
 // ============================================================
 // CONFIG
@@ -464,8 +463,6 @@ function GoalScreen({goal,onSaveGoal}){
   const[targetProfit,setTargetProfit]=useState(goal.targetProfit?String(goal.targetProfit):'');
   const[saving,setSaving]=useState(false);
   const[done,setDone]=useState(false);
-  const[apiUrl,setApiUrl]=useState(API_URL);
-  const[apiSaved,setApiSaved]=useState(false);
   const tp=Number(targetProfit)||0;
   const estRevenue=tp>0?Math.round(tp/0.8):0;
   const estCases=estRevenue>0?Math.ceil(estRevenue/15000):0;
@@ -475,67 +472,34 @@ function GoalScreen({goal,onSaveGoal}){
     if(tp<=0)return;
     setSaving(true);
     const g={yearMonth:ym,targetProfit:tp,requiredRevenue:estRevenue,requiredCases:estCases};
-    if(API_URL){apiPost('setGoal',g).then(()=>{onSaveGoal(g);setSaving(false);setDone(true);setTimeout(()=>setDone(false),2000)}).catch(()=>{onSaveGoal(g);setSaving(false);setDone(true);setTimeout(()=>setDone(false),2000)})}
-    else{setTimeout(()=>{onSaveGoal(g);setSaving(false);setDone(true);setTimeout(()=>setDone(false),2000)},400)}
+    apiPost('setGoal',g).then(()=>{onSaveGoal(g);setSaving(false);setDone(true);setTimeout(()=>setDone(false),2000)}).catch(()=>{onSaveGoal(g);setSaving(false);setDone(true);setTimeout(()=>setDone(false),2000)});
   }
-
-  function handleApiSave(){
-    const v=apiUrl.trim();
-    try{localStorage.setItem('fn_api_url',v)}catch(e){}
-    API_URL=v;
-    setApiSaved(true);
-    setTimeout(()=>location.reload(),800);
-  }
-
-  const cs={borderRadius:16,padding:16,background:'#1e293b'};
 
   return h('div',{style:{padding:16,display:'flex',flexDirection:'column',gap:20,paddingBottom:32}},
-    h('div',{style:{fontSize:16,fontWeight:700,color:'#e2e8f0',display:'flex',alignItems:'center',gap:8}},I.Settings(18),' 設定'),
-
-    // === GAS接続 ===
-    h('div',{style:{...cs,border:API_URL?'1px solid rgba(16,185,129,0.2)':'1px solid rgba(245,158,11,0.3)'}},
-      h('div',{style:{fontSize:13,fontWeight:700,color:API_URL?'#10b981':'#f59e0b',marginBottom:12,display:'flex',alignItems:'center',gap:6}},
-        API_URL?I.CheckCircle(14):I.AlertCircle(14),
-        API_URL?' GAS接続済み':' GAS未接続'
-      ),
-      h('div',{style:{fontSize:11,color:'#64748b',marginBottom:8}},'GASウェブアプリのURLを貼り付けてください'),
-      h('input',{type:'text',value:apiUrl,onChange:e=>setApiUrl(e.target.value),
-        placeholder:'https://script.google.com/macros/s/.../exec',
-        style:{width:'100%',boxSizing:'border-box',padding:'12px',borderRadius:10,border:'1px solid #334155',background:'#0f172a',color:'#e2e8f0',fontSize:13,outline:'none'}}),
-      h('button',{onClick:handleApiSave,disabled:apiSaved,
-        style:{marginTop:10,width:'100%',padding:'12px',borderRadius:10,border:'none',fontWeight:700,fontSize:13,cursor:'pointer',
-          background:apiSaved?'#10b981':'#2563eb',color:'#fff',transition:'all .15s'}},
-        apiSaved?'✅ 保存しました（再読み込み中…）':'URLを保存して接続'
-      )
-    ),
-
-    // === 月次目標 ===
-    h('div',{style:{fontSize:14,fontWeight:700,color:'#e2e8f0',marginTop:8}},'月次目標設定'),
-    h('div',{style:cs},h('div',{style:{fontSize:12,color:'#64748b',marginBottom:4}},'対象月'),h('div',{style:{fontSize:20,fontWeight:700,color:'#e2e8f0'}},now.getFullYear()+'年'+(now.getMonth()+1)+'月')),
+    h('div',{style:{fontSize:16,fontWeight:700,color:'#e2e8f0',display:'flex',alignItems:'center',gap:8}},I.Settings(18),' \u6708\u6b21\u76ee\u6a19\u8a2d\u5b9a'),
+    h('div',{style:{borderRadius:16,padding:16,background:'#1e293b'}},h('div',{style:{fontSize:12,color:'#64748b',marginBottom:4}},'\u5bfe\u8c61\u6708'),h('div',{style:{fontSize:20,fontWeight:700,color:'#e2e8f0'}},now.getFullYear()+'\u5e74'+(now.getMonth()+1)+'\u6708')),
     h('div',{style:{borderRadius:16,padding:16,background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.1)'}},
-      h('div',{style:{fontSize:12,color:'#60a5fa',marginBottom:8,display:'flex',alignItems:'center',gap:6}},I.Info(12),' 年間目標からの参考値'),
+      h('div',{style:{fontSize:12,color:'#60a5fa',marginBottom:8,display:'flex',alignItems:'center',gap:6}},I.Info(12),' \u5e74\u9593\u76ee\u6a19\u304b\u3089\u306e\u53c2\u8003\u5024'),
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
-        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'年間目標粗利'),h('div',{className:'mono',style:{fontSize:15,fontWeight:700,color:'#e2e8f0'}},fmt(CFG.annualTarget))),
-        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'月平均必要額'),h('div',{className:'mono',style:{fontSize:15,fontWeight:700,color:'#60a5fa'}},fmt(monthlyTarget)))
+        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'\u5e74\u9593\u76ee\u6a19\u7c97\u5229'),h('div',{className:'mono',style:{fontSize:15,fontWeight:700,color:'#e2e8f0'}},fmt(CFG.annualTarget))),
+        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'\u6708\u5e73\u5747\u5fc5\u8981\u984d'),h('div',{className:'mono',style:{fontSize:15,fontWeight:700,color:'#60a5fa'}},fmt(monthlyTarget)))
       )
     ),
-    NumInput({label:'今月の目標粗利',iconFn:s=>I.Target(s),value:targetProfit,onChange:setTargetProfit,unit:'円'}),
+    NumInput({label:'\u4eca\u6708\u306e\u76ee\u6a19\u7c97\u5229',iconFn:s=>I.Target(s),value:targetProfit,onChange:setTargetProfit,unit:'\u5186'}),
     tp>0&&h('div',{style:{borderRadius:16,padding:16,background:'#1e293b',animation:'slideDown .25s ease-out'}},
-      h('div',{style:{fontSize:12,color:'#64748b',marginBottom:12}},'概算（平均粗利率80%・平均単価\u00a515,000で算出）'),
+      h('div',{style:{fontSize:12,color:'#64748b',marginBottom:12}},'\u6982\u7b97\uff08\u5e73\u5747\u7c97\u5229\u738780%\u30fb\u5e73\u5747\u5358\u4fa1\u00a515,000\u3067\u7b97\u51fa\uff09'),
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
-        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'必要売上'),h('div',{className:'mono',style:{fontSize:18,fontWeight:700,color:'#e2e8f0'}},fmt(estRevenue))),
-        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'必要案件数'),h('div',{className:'mono',style:{fontSize:18,fontWeight:700,color:'#e2e8f0'}},estCases+'件'))
+        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'\u5fc5\u8981\u58f2\u4e0a'),h('div',{className:'mono',style:{fontSize:18,fontWeight:700,color:'#e2e8f0'}},fmt(estRevenue))),
+        h('div',null,h('div',{style:{fontSize:11,color:'#64748b'}},'\u5fc5\u8981\u6848\u4ef6\u6570'),h('div',{className:'mono',style:{fontSize:18,fontWeight:700,color:'#e2e8f0'}},estCases+'\u4ef6'))
       )
     ),
     h('button',{onClick:handleSave,disabled:tp<=0||saving,style:{width:'100%',borderRadius:16,fontWeight:700,fontSize:16,border:'none',cursor:tp>0&&!saving?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'18px',background:tp>0&&!saving?'#2563eb':'#1e293b',color:tp>0&&!saving?'#fff':'#64748b',transition:'all .15s'}},
       saving?h('div',{style:{width:20,height:20,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 1s linear infinite'}}):
-      done?h(Fragment,null,I.CheckCircle(18),' 保存しました'):h(Fragment,null,I.Send(18),' 目標を設定')
-    ),
-    !API_URL&&h('div',{style:{fontSize:11,color:'#f59e0b',textAlign:'center'}},'※ GAS未接続のためスプレッドシートには未保存')
+      done?h(Fragment,null,I.CheckCircle(18),' \u4fdd\u5b58\u3057\u307e\u3057\u305f'):h(Fragment,null,I.Send(18),' \u76ee\u6a19\u3092\u8a2d\u5b9a')
+    )
   );
 }
 
-// ============================================================
 // APP
 // ============================================================
 function App(){
@@ -598,7 +562,8 @@ function App(){
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(App));
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+// Service Worker無効化（古いSWが通信を妨害するため全て削除）
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>{rs.forEach(r=>r.unregister())});caches.keys().then(ks=>{ks.forEach(k=>caches.delete(k))})}
 </script>
 </body>
 </html>

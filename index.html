@@ -140,8 +140,21 @@ function fmt(n){return'\u00a5'+n.toLocaleString()}
 // ============================================================
 // API
 // ============================================================
-async function apiGet(action,params={}){if(!API_URL)return null;const u=new URL(API_URL);u.searchParams.set('action',action);Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));const r=await fetch(u);return r.json()}
-async function apiPost(action,data){if(!API_URL)return null;const r=await fetch(API_URL,{method:'POST',body:JSON.stringify({action,data})});return r.json()}
+async function apiGet(action,params={}){if(!API_URL)return null;try{const u=new URL(API_URL);u.searchParams.set('action',action);Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));const r=await fetch(u);return r.json()}catch(e){console.error('GET error:',e);return null}}
+async function apiPost(action,data){
+  if(!API_URL)return null;
+  // GASはPOST時に302リダイレクトでCORS問題が起きやすい
+  // 確実な方法: データをGETパラメータで送信（GAS側でdoGetで処理）
+  try{
+    const u=new URL(API_URL);
+    u.searchParams.set('action',action);
+    u.searchParams.set('payload',JSON.stringify(data));
+    const r=await fetch(u);
+    const j=await r.json();
+    if(j&&j.error){console.error('GAS error:',j.error);alert('GASエラー: '+j.error)}
+    return j;
+  }catch(e){console.error('API error:',e);alert('通信エラー: '+e.message);return null}
+}
 
 // ============================================================
 // API STATUS BANNER
